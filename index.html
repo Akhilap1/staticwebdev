@@ -1,17 +1,594 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="styles.css">
-  <title>Vanilla JavaScript App</title>
-</head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <title>GDelt API testing</title>
 
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" >
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.24/css/jquery.dataTables.min.css"/>
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/1.7.0/css/buttons.dataTables.min.css"/>
+
+<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" ></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" ></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" ></script>
+<script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+	 <script type="text/javascript" src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.min.js"></script>
+	 <script type="text/javascript" src="https://cdn.datatables.net/buttons/1.7.0/js/dataTables.buttons.min.js"></script>
+	 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+	 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+	 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+	 <script type="text/javascript" src="https://cdn.datatables.net/buttons/1.7.0/js/buttons.html5.min.js"></script>
+	 <script type="text/javascript" src="https://cdn.datatables.net/buttons/1.7.0/js/buttons.print.min.js"></script>
+
+<style> /* set the CSS */
+
+
+@media print {
+  body {
+    margin: 0;
+    color: #000;
+    background-color: #fff;
+  }
+}
+.line {
+  fill: none;
+  stroke: steelblue;
+  stroke-width: 2px;
+}
+
+ .dropdown-menu{
+ max-width:300px;
+ }  
+
+/* Ensure that the demo table scrolls */
+/* Ensure that the demo table scrolls */
+    th, td { white-space: wrap; }
+.table-condensed{
+  font-size: 12px;
+}
+</style>
+<script> 
+
+function Query()
+{
+
+	var modeStr ="artlist";
+	var url = "https://api.gdeltproject.org/api/v2/doc/doc?query="
+	//example ////%22bareilly%20police%22&mode=timelinevolinfo&TIMELINESMOOTH=5"
+	var kw1 = document.getElementById("keyword1").value;
+	var kw2 = document.getElementById("keyword2").value;
+	
+	if (kw1 =="" & kw2 =="")
+	{
+		kw1 = "Kisan"
+		document.getElementById("keyword1").value = "Kisan";
+
+	}
+	
+	//add keywords to API Query
+	var apiQuery = url + "%22"+kw1 + '%20'+kw2+"%22"
+	
+	//sort output by date descending
+	apiQuery = apiQuery + "&sort=datedesc"
+
+	//apiQuery = apiQuery+"&sourcecountry:india";
+
+	//sourcelang:spanish
+	var e = document.getElementById("language-select");
+	var langStr = e.options[e.selectedIndex].value;
+	apiQuery = apiQuery + "&sourcelang=" +langStr;
+
+
+	//get maximum "n" records
+	var e = document.getElementById("maxrecords-select");
+	var maxrecordStr = e.options[e.selectedIndex].value;
+	apiQuery = apiQuery + "&maxrecords="+maxrecordStr;
+
+	///Set JSON Query for datatable
+	var jsonQuery= apiQuery +"&format=json";
+	
+	/// Set Mode for Chart API
+	//&mode=artlist&maxrecords=100&timespan=1week
+	var e = document.getElementById("displaymode-select");
+	modeStr = e.options[e.selectedIndex].value;
+
+
+ 	apiQuery = apiQuery +"&mode="+modeStr;
+	if (modeStr)
+	{
+		$('#BASEAPIQuery').val(apiQuery);
+		$('#FULLAPIQuery').val(jsonQuery);
+
+	}
+
+	document.getElementById("GdeltChartFrame1").src =  apiQuery; //apiQuery+"%22&mode=timelinevolinfo&TIMELINESMOOTH=5";
+	//document.getElementById("GdeltFrame2").src =  str+"&format=json"; //apiQuery+"%22&mode=timelinevolinfo&TIMELINESMOOTH=5";
+
+	fetch(jsonQuery)
+  		.then(response => response.json())
+  		.then(response => {
+  			console.log(response); 
+  		    //document.getElementById("GdeltFrame2").innerHTML=response;
+  		   ///buildHtmlTable(response,'#excelDataTable');
+  		   createDataTableFromArticleList(response.articles);
+  		});
+
+
+
+}
+
+function createDataTableFromGEOJSON(articleList)
+{
+
+		$('#GdeltFrame2').empty();
+		if (articleList.length >= 1 )
+		{
+			divData =  '<div class=\'table-responsive\'>';
+			divData = divData + '<div class=\'span10\'>';
+			divData = divData + '	<table id=\"detail-table\" class=\"display table table-active table-striped table-bordered\" cellspacing=\"2\"; width=\"80%\" style="border:2px solid green;\"  >  '+
+						'<thead style =\"background:#0099cc;\">'+
+						  '<tr class=\'header\'>' +
+							'<th>location[lat,long]</th>'+
+							'<th>name</th>'+
+							'<th>url</th>'+
+							'<th>count</th>'+
+						  '</tr>'+
+						'</thead>'
+			divData= divData + '   <tbody> ';
+
+			articleList.forEach( function (d) {
+				
+				divData = divData + '\n' + '<tr> '+ //<td>' + v.Queue +' </td>' +
+							'<td>' + d.coordinates +'</td>' +
+							'<td>' + d.name + '</td>' +
+							'<td>' + d.g2 +'</td>' +
+							'<td>' + d.count +'</td>' +
+							' </tr>';
+
+				
+				});
+
+			divData = divData + '</tbody></table> </div> </div> </br>';
+			//alert($('#'+sup));
+			$('#GdeltFrame2').append(divData);
+
+		} 
+
+		//var table = document.getElementById(sup+'dc-table-graph');
+		//table.dataTable();
+	    $('#detail-table').dataTable({
+	    	"lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
+        dom: 'Bfrtip',
+        buttons: [
+            'copy', 'csv', 'excel', 'pdf', 'print'
+        ]
+    } );
+
+}
+
+function displayGEOJSONObject(featurelist, administrative=false)
+{
+
+	if (administrative == false)
+	{
+
+	//geometry: {type: "Point", coordinates: Array(2)}
+	//properties: {name: "India", count: 43, shareimage: "https://ml.globenewswire.com/Resource/Download/908fb457-7f8e-4a08-9081-5565e3dfb3d7?size=1", html: "<a href=\"https://www.outlookindia.com/website/stor…ump Market Report 2021 Featuring Tata</a><br><br>"}
+	//type: "Feature"
+
+
+	//<a href="https://zeenews.india.com/india/in-solidarity-with-farmers-ten-central-trade-unions-to-hold-day-long-nationwide-protest-on-june-26-2371805.html" title="In solidarity with farmers , ten central trade unions to hold day - long nationwide protest on June 26" target="_blank">In solidarity with farmers , ten central trade unions to hold day - long nationwide protest on June 26</a><br><br>
+	//<a href="https://www.newindianexpress.com/cities/delhi/2021/jun/25/farmers-to-submit-memorandums-against-agri-laws-on-saturday-security-increased-in-delhi-2321510.html" title="Farmers to submit memorandums against agri laws on Saturday ; security increased in Delhi" target="_blank">Farmers to submit memorandums against agri laws on Saturday ; security increased in Delhi</a><br><br>
+	//<a href="https://economictimes.indiatimes.com/news/india/anticipating-farmers-protest-delhi-metro-to-shut-three-stations-on-saturday/articleshow/83850122.cms" title="Anticipating farmer protest , Delhi Metro to shut three stations on Saturday" target="_blank">Anticipating farmer protest , Delhi Metro to shut three stations on Saturday</a><br><br>
+	//<a href="https://thewire.in/agriculture/haryana-farmers-to-march-towards-governors-house-on-june-26" title="Haryana Farmers to March Towards Governor House on June 26" target="_blank">Haryana Farmers to March Towards Governor House on June 26</a><br><br>
+	//<a href="https://www.bignewsnetwork.com/news/270056191/farmers-to-submit-memorandums-to-governors-against-farm-law" title="Farmers to submit memorandums to Governors against farm law" target="_blank">Farmers to submit memorandums to Governors against farm law</a><br><br>
+
+	  var regex = /href\s*=\s*(['"])(https?:\/\/.+?)\1/gi;
+
+	  var urls =[];
+
+			featurelist.forEach( function (d) {
+	
+				var count= d.properties.count;
+				var name = d.properties.name;
+
+				///alert(d.geometry.coordinates);
+				coordinates = d.geometry.coordinates;
+
+				propertyStr = d.properties.html;
+			  	propertyStr.replace(regex, function(match, g1, g2) { urls.push({coordinates, g2, name, count}); });
+				
+				});
+
+		//console.log(urls);
+		//add to data table...
+		createDataTableFromGEOJSON(urls);
+
+
+	}
+	else {
+
+	//gnsadm1: "IN07"
+	//html: "<a href=\"https://zeenews.india.com/india/in-solidarity-with-farmers-ten-central-trade-unions-to-hold-day-long-nationwide-protest-on-june-26-2371805.html\" title=\"In solidarity with farmers , ten central trade unions to hold day - long nationwide protest on June 26\" target=\"_blank\">In solidarity with farmers , ten central trade unions to hold day - long nationwide protest on June 26</a><br><br><a href=\"https://www.newindianexpress.com/cities/delhi/2021/jun/25/farmers-to-submit-memorandums-against-agri-laws-on-saturday-security-increased-in-delhi-2321510.html\" title=\"Farmers to submit memorandums against agri laws on Saturday ; security increased in Delhi\" target=\"_blank\">Farmers to submit memorandums against agri laws on Saturday ; security increased in Delhi</a><br><br><a href=\"https://economictimes.indiatimes.com/news/india/anticipating-farmers-protest-delhi-metro-to-shut-three-stations-on-saturday/articleshow/83850122.cms\" title=\"Anticipating farmer protest , Delhi Metro to shut three stations on Saturday\" target=\"_blank\">Anticipating farmer protest , Delhi Metro to shut three stations on Saturday</a><br><br><a href=\"https://www.tribuneindia.com/news/nation/delimitation-commission-to-hold-parleys-soon-for-redrawing-j-k-constituencies-273721\" title=\"Delimitation commission to hold parleys &apos; soon &apos; for redrawing J - K constituencies : The Tribune India\" target=\"_blank\">Delimitation commission to hold parleys &apos; soon &apos; for redrawing J - K constituencies : The Tribune India</a><br><br><a href=\"https://www.outlookindia.com/website/story/india-news-farm-laws-protesters-at-delhi-borders-to-mark-7-months-of-agitation-on-june-26/386091\" title=\"Farm Laws : Protesters At Delhi Borders To Mark 7 Months Of Agitation On June 26\" target=\"_blank\">Farm Laws : Protesters At Delhi Borders To Mark 7 Months Of Agitation On June 26</a><br><br>"
+	//name: "Delhi, India"
+	//nec: "IND-2428"
+	//shareimage: "https://english.cdn.zeenews.com/sites/default/files/2021/06/25/946706-citu-trade.jpg"
+	//value: 0.0431
+	  var regex = /href\s*=\s*(['"])(https?:\/\/.+?)\1/gi;
+	  var s = '[description:"aoeu" uuid:"123sth"]';
+
+	  s.replace(regex, function(match, g1, g2) { console.log(g1, g2); });
+
+		featurelist.forEach( function (d) {
+		coordinates = d.geometry.coordinates;
+		coordinates.forEach(function (e) {
+
+					console.log(e)
+
+				});
+				});
+
+
+
+	}
+
+
+
+
+}
+
+
+function createDataTableFromArticleList(articleList)
+{
+
+$('#GEOJSON1').hide();
+//domain: "dnaindia.com"
+//language: "English"
+//seendate: "20210502T070000Z"
+//socialimage: "https://cdn.dnaindia.com/sites/default/files/styles/full/public/2021/05/02/972215-kisan-credit-card-pib-twitter-handle.jpg"
+//sourcecountry: "India"
+//title: "PM Kisan Yojana : How to get free credit card , know application process"
+//url: "https://www.dnaindia.com/personal-finance/report-pm-kisan-yojana-how-to-get-free-credit-card-know-application-process-2888578"
+//url_mobile: "https://www.dnaindia.com/personal-finance/report-pm-kisan-yojana-how-to-get-free-credit-card-know-application-process-2888578/amp"
+
+		$('#GdeltFrame2').empty();
+		if (articleList.length >= 1 )
+		{
+			divData =  '<div class=\'table-responsive\'>';
+			divData = divData + '<div class=\'span10\'>';
+			divData = divData + '	<table id=\"detail-table\" class=\"display table table-active table-striped table-bordered\" cellspacing=\"2\"; width=\"80%\" style="border:2px solid green;\"  >  '+
+						'<thead style =\"background:#0099cc;\">'+
+						  '<tr class=\'header\'>' +
+							'<th>domain</th>'+
+							'<th>language</th>'+
+							'<th>seendate</th>'+
+							'<th>sourcecountry</th>'+
+							'<th>title</th>'+
+							'<th>url</th>'+
+							'<th>socialimage</th>'+
+						  '</tr>'+
+						'</thead>'
+			divData= divData + '   <tbody> ';
+
+			articleList.forEach( function (d) {
+				
+				divData = divData + '\n' + '<tr> '+ //<td>' + v.Queue +' </td>' +
+							'<td>' + d.domain +'</td>' +
+							'<td>' + d.language + '</td>' +
+							'<td>' + d.seendate +'</td>' +
+							'<td>' + d.sourcecountry +'</td>' +
+							'<td>' + d.title +'</td>' +
+							'<td>' + d.url +' </td>' +
+							'<td><img src=' + d.socialimage+ ' alt="" border=3 height=100 width=100></img></td>' +
+							' </tr>';
+
+				
+				});
+
+			divData = divData + '</tbody></table> </div> </div> </br>';
+			//alert($('#'+sup));
+			$('#GdeltFrame2').append(divData);
+
+		} 
+
+		//var table = document.getElementById(sup+'dc-table-graph');
+		//table.dataTable();
+	    $('#detail-table').dataTable({
+	    	"lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
+        dom: 'Bfrtip',
+        buttons: [
+            'copy', 'csv', 'excel', 'pdf', 'print'
+        ]
+    } );
+
+
+}
+
+function QueryForGEOChartByADM()
+{
+	var url = "https://api.gdeltproject.org/api/v2/geo/geo?query="
+	//example ////%22bareilly%20police%22&mode=timelinevolinfo&TIMELINESMOOTH=5"
+	var kw1 = document.getElementById("keyword1").value;
+	var kw2 = document.getElementById("keyword2").value;
+	
+	if (kw1 =="" & kw2 =="")
+	{
+		kw1 = "Kisan"
+		document.getElementById("keyword1").value = "Kisan";
+
+	}
+	
+	//add keywords to API Query
+	var apiQuery = url + "%22"+kw1 + '%20'+kw2+"%22"
+	apiQuery=apiQuery+"&mode=ADM1";
+	document.getElementById("GdeltChartFrame1").src =  apiQuery ;
+
+
+}
+
+
+function QueryForGEOChart(StateStr)
+{
+
+	var url = "https://api.gdeltproject.org/api/v2/geo/geo?query="
+	//example ////%22bareilly%20police%22&mode=timelinevolinfo&TIMELINESMOOTH=5"
+	var kw1 = document.getElementById("keyword1").value;
+	var kw2 = document.getElementById("keyword2").value;
+	
+	if (kw1 =="" & kw2 =="")
+	{
+		kw1 = "Kisan"
+		document.getElementById("keyword1").value = "Kisan";
+
+	}
+	
+	//add keywords to API Query
+	var apiQuery = url + "%22"+kw1 + '%20'+kw2+"%22"
+	
+	if (StateStr =='')
+	{
+	var e = document.getElementById("lat-long-select");
+	nearStr = e.options[e.selectedIndex].value;
+ 	apiQuery = apiQuery +nearStr;
+
+ }else{
+ 	 	apiQuery = apiQuery +"&" + StateStr;
+
+ }
+	alert(apiQuery); //apiQuery+"%22&mode=timelinevolinfo&TIMELINESMOOTH=5";
+
+	document.getElementById("GdeltChartFrame1").src =  apiQuery ;
+
+	fetch(apiQuery+"&format=geoJSON")
+  		.then(response => response.json())
+  		.then(response => {
+  			console.log(response); 
+  		    //document.getElementById("GdeltFrame2").innerHTML=response;
+  		   ///buildHtmlTable(response,'#excelDataTable');
+  		   displayGEOJSONObject(response.features, false);
+  		   //alert(response.features);
+  		});
+	
+
+}
+////===============================================================
+function QueryForChart(strAPIQuery)
+{
+	//https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/
+	//https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/
+	//https://api.gdeltproject.org/api/v2/doc/doc?query=%22kisan%22&mode=timelinevolinfo&TIMELINESMOOTH=5&sourcecountry:india&format=json
+
+	//Query by location
+	//https://api.gdeltproject.org/api/v2/geo/geo?query=near:26.8467,80.9462,200&format=geoJSON
+
+	//Query all UttarPradesh
+	//https://api.gdeltproject.org/api/v2/geo/geo?query=locationadm1:IN36&format=geoJSON
+
+	//&mode=artlist&maxrecords=100&timespan=1week
+	//https://api.gdeltproject.org/api/v2/doc/doc?query=%22kisan%22&mode=timelinevolinfo&TIMELINESMOOTH=5&sourcecountry:india&format=json
+	//sourcelang:spanish
+
+
+	document.getElementById("GdeltChartFrame1").src =  strAPIQuery; //apiQuery+"%22&mode=timelinevolinfo&TIMELINESMOOTH=5";
+
+}
+
+//=====================================================================
+function QueuryForDatatable(strAPIQuery)
+{
+
+	fetch(strAPIQuery)
+  		.then(response => response.json())
+  		.then(response => {
+  			console.log(response); 
+  		    //document.getElementById("GdeltFrame2").innerHTML=response;
+  		   ///buildHtmlTable(response,'#excelDataTable');
+  		   createDataTableFromArticleList(response.articles);
+  		});
+
+}
+
+//=====================================================================
+
+
+
+</script> 
+
+</head>
 <body>
-  <main>
-    <h1>Vanilla JavaScript App</h1>
-  </main>
+
+
+    <div id="wrapper" class="container col-md-12 nopadding" style="background-color:#C5DDEC;">
+  		<div>
+  			<p style="font-familty:verdana; font-size:200%; text-align:center; "> Query GDelt </p> 
+  			<p style="background-color:#d9d9d9;text-align:center; "><a href="https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts">GDELT 2.0 DOC API-full text search API</a></p>
+			<p style="background-color:#d9d9d9;text-align:center; "><a href="https://blog.gdeltproject.org/gdelt-geo-2-0-api-debuts">GDELT GEO 2.0 API - Maps and geoJson </a></p> 		
+		</div>
+
+ 		<div class="container col-md-11 "  style="padding:50px;background-color:#7EB5D8;"> 
+ 			<div class="row">
+  			<div class="col-md-5" style="background-color:#7EB5D8;">
+
+  				<div style="background-color:#C5DDEC;padding-left: 20px">
+				<label>Search by keyword1 and keyword2 </label><br>
+  				<label>Keyword1 </label> <input id="keyword1"></input> AND <br>
+  				<label>Keyword2 </label> <input id="keyword2"></input> 
+
+  				</div>
+  				<div id="LanguageSelect" style="background-color:#C5DDEC;padding-left: 20px">
+  					<label for="keyword1">Select a source language</label>
+  				    <select name="Language" id="language-select">
+    				<option value="hindi">Hindi</option>
+    				<option value="english">English</option>
+  				 </select>
+  				</div>
+  				<div id="MaxrecordsSelect" style="background-color:#C5DDEC;padding-left: 20px;">
+  					<label >Select maximum number of articles to fetch</label>
+  				    <select name="maxrecords" id="maxrecords-select">
+    				<option value=100>100</option>
+    				<option value=200>200</option>
+  				 </select>
+  				</div>
+  				<div style="background-color:#C5DDEC;padding-left: 20px;">
+				<label for="DisplayMode">Choose a Mode for Chart display:</label>
+  				<select class="form-control selcls col-md-6" name="Display Mode" id="displaymode-select">
+    				<option value="artlist">Article List</option>
+    				<option value="artgallery"> Art gallery</option>
+    				<option value="timelinevol">TimelineVol - volume of news coverage by day/hour etc.</option>
+    				<option value="TimelineVolRaw">TimelineVolRaw </option>
+    				<option value="tonechart">ToneChart- visualization that creates an emotional histogram showing the tonal distribution of coverage of your query</option>
+    				<option value="imagecollage">Image Collage</option>
+    				<option value="WordCloudImageTags"> WordCloudImageTags</option>
+  				</select>
+				<label for="keyword_kisan">Query all articles with keyword1 and keyword2 and display a chart 
+   					<input type="submit" name="event" value="Show Chart" class="btn btn-primary" onclick="return Query()" />
+				</label>
+
+  				</div>
+
+  				<div class="col-md-12" style="background-color:#C5DDEC;">
+				<p></p>
+				<label >Show geo map for keyword1 and keyword2 for mentions of all locations within 100kms near:[lat,long]</label>
+  				<select class="form-control selcls col-md-6" name="Location" id="lat-long-select">
+    				<option value="near:26.8467,80.9462,100">Lucknow</option>
+    				<option value="near:28.3670,79.4304,100">Bareilly</option>
+    				<option value="near:28.8386,78.7733,100">Moradabad</option>
+    				<option value="near:25.3176,82.9739,100">Varanasi</option>
+  				</select>
+
+				<textarea  id ="QueryForLatLong" style="display:none; width:100%;background-color:#FFFFFF;">https://api.gdeltproject.org/api/v2/geo/geo?query=near:26.8467,80.9462,200&format=geoJSON<br></textarea>
+				<p style="background-color:#FFFFFF;"></p>
+				<input  type="submit" name="event" value="Show Map"  class="btn btn-primary" 
+				onclick="return QueryForGEOChart('')" />
+				<p></p>
+				
+				<br>
+				</div>
+				<br>
+				<div class="col-md-12" style="background-color:#C5DDEC;">
+				<label>Show geo map for keyword1 and keyword2 for all UttarPradesh</label>
+				<textarea id ="QueryForUttarPradesh" style="display:none; width:100%;background-color:#FFFFFF;">https://api.gdeltproject.org/api/v2/geo/geo?query=locationadm1:IN36&format=geoJSON
+					<br></textarea>
+				<input   type="submit" name="event" value="Show Map"  class="btn btn-primary" 
+				onclick="return QueryForGEOChart('locationadm1:IN36')" />
+				<p></p>
+
+				<br>
+  				</div>
+  				<div class="col-md-12" style="background-color:#C5DDEC;">
+				<p></p>
+				<label >First-order administrative division map of all locations mentioned near "keyword1 and keyword2"</label>
+				<textarea  id ="QueryForADM1" style="display:none; width:100%;background-color:#FFFFFF;">https://api.gdeltproject.org/api/v2/geo/geo?query=&mode=ADM1<br></textarea>
+				<p style="background-color:#FFFFFF;"></p>
+				<input  type="submit" name="event" value="Show Map"  class="btn btn-primary" 
+				onclick="return QueryForGEOChartByADM()" />
+				<p></p>
+				
+				<br>
+				</div>
+
+  			</div> <!--row -->
+  			<div class="row col-md-7" >
+  				<div style="display:None">
+  				<p > Query for Chart Display </p>
+   					<input type="submit" name="event" value="Re-Query from GDELT"  class="btn btn-primary" onclick="alert($('#BASEAPIQuery').val()); 
+   					return QueryForChart($('#BASEAPIQuery').val())" />
+  				<label >Re-Plot the chart by clicking the button after editing the query below 
+				</label>
+
+				<textarea id ="BASEAPIQuery" style="width:100%">https://api.gdeltproject.org/api/v2/doc/doc?query=%22kisan%22&mode=timelinevolinfo&TIMELINESMOOTH=5&sourcecountry:india
+				<br></textarea>
+				</div>
+				<div class="col-md-12"> 
+  				<iframe id="GdeltChartFrame1"  class="col-md-12" src="url" title="description"  height="100%"; style="background-color:#FFFFFF;" ></iframe>
+  				</div>
+  				<br>
+  			</div> <!-- col -->
+
+ 			</div>
+ 			</div> <!--container -->
+ 			<br>
+ 			<div class="container col-md-11" style="padding:50px;background-color:#7EB5D8;">
+  			<div class="row col-md-11" style="background-color:  #7EB5D8; " >
+
+  				<div class="col-md-6" style="display: none">
+  				<label >Re-Populates the datatable by clicking the button after editing the query below 
+				</label><br>
+   					<input type="submit" name="event" value="Re-Query from GDELT" class="button" onclick="alert($('#FULLAPIQuery').val()); 
+   					return QueuryForDatatable($('#FULLAPIQuery').val())" />
+  				<p> Query Article List in JSON for Data Table </p>
+  				<textarea id ="FULLAPIQuery" style="width:100%">https://api.gdeltproject.org/api/v2/doc/doc?query=%22kisan%22&mode=timelinevolinfo&TIMELINESMOOTH=5&sourcecountry:india<br></textarea>
+  				</div>
+  				<div id="GdeltFrame2" style="padding-left: 0px; padding-right: 50px">
+  					 <iframe id="GEOJSON1"  class="col-md-12" src="url" title="description"  height="500px"; 
+  					 style="background-color:#FFFFFF; display: none" ></iframe>
+
+  				</div>
+  			</div>
+
+
+
+ 			<div class="col-md-6" style="background-color:#FFFFFF;">
+
+  			</div>
+
+
+
+		</div>
+
+	</div>
 </body>
 
+
+<script type="text/javascript">
+	
+$("#language-select").change(function()
+{
+
+	Query();
+
+}).change();
+
+
+$("#displaymode-select").change(function()
+{
+
+	Query();
+
+}).change();
+
+
+$("#maxrecords-select").change(function()
+{
+	Query();
+
+}).change();
+
+
+
+</script>
 </html>
